@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on Project 3</title>
+    <link>/post/</link>
+    <description>Recent content in Posts on Project 3</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-US</language>
+    <lastBuildDate>Sat, 05 Dec 2020 00:00:00 +0000</lastBuildDate><atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Python vs R</title>
+      <link>/post/2020/12/05/python-vs-r/</link>
+      <pubDate>Sat, 05 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2020/12/05/python-vs-r/</guid>
+      <description>Learning about data wrangling was tough enough this semester, but throw in some python and now my head is really spinning. During the last few lectures, the most surprising thing was that you can actually code python in RStudio! This can be done by creating python code chunks.
+First ensure the “reticulate” package has been installed and now let’s try some python coding! Fingers crossed! Hopefully it works.</description>
+    </item>
+    
+  </channel>
+</rss>

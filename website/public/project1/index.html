@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="author" content="Melissa Chen" />
+    
+    <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico">
+    <title>Analysis of Happiness Score and Alcohol Consumption per Country</title>
+    <meta name="generator" content="Hugo 0.79.0" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="/css/main.css" />
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,400,200bold,400old" />
+    
+    <!--[if lt IE 9]>
+			<script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+			<script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+		<![endif]-->
+
+    
+  </head>
+
+  <body>
+    <div id="wrap">
+      
+      <nav class="navbar navbar-default">
+  <div class="container">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="/"><i class="fa fa-home"></i></a>
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+    </div>
+    <div class="navbar-collapse collapse" id="navbar">
+      <ul class="nav navbar-nav navbar-right">
+      
+        
+        <li><a href="/post/">BLOG</a></li>
+        
+        <li><a href="/projects/">PROJECTS</a></li>
+        
+        <li><a href="/resume/">RESUME</a></li>
+        
+      
+      </ul>
+    </div>
+  </div>
+</nav>
+
+      <div class="container">
+        <div class="blog-post">
+          <h3>
+            <strong><a href="/project1/">Analysis of Happiness Score and Alcohol Consumption per Country</a></strong>
+          </h3>
+        </div>
+ 
+<div class="blog-title">
+          <h4>
+         January 1, 0001 
+            &nbsp;&nbsp;
+            
+          </h4>
+        </div>
+
+        <div class="panel panel-default">
+          <div class="panel-body">
+            <div class="blogpost">
+              
+<link href="/rmarkdown-libs/anchor-sections/anchor-sections.css" rel="stylesheet" />
+<script src="/rmarkdown-libs/anchor-sections/anchor-sections.js"></script>
+
+
+<p>The two datasets I chose are about the happiness index of countries (2019) and the average alcohol servings of countries. I got this dataset from kaggle and the world happiness report. The happiness_index dataset includes countries, their rank in happiness, the happiness score, GPD per capita, social support, healthy life expectancy, freedom to make life choices, generosity, and perceptions of corruption. These variables were calculated by surverying citizens of each country on each statistic and using a complex formula to calculate the score of happiness index to get the rank of each country.</p>
+<p>The second dataset I have is about the average amount of alcohol servings consumed per alcohol type of each country. This dataset was obtained from FiveThirtyEight and also includes the continent each country is from and calculated the average liters of alcohol consumed using the previous variables mentioned. The data for amount of alcohol consumed per serving is compiled from the WHO.</p>
+<p>Originally, I wanted to find analyze the relationship between amount of caffeine consumed and how it correlates to the happiness of each country. However, since there were no free datasets that I can find for caffeine consumption, I decided to examine instead the relationship between happiness of a country and their alcohol consumption. I expect that countries that rank higher in the happiness index will have higher consumption of alcohol. However, it is just as likely that certain continents will have higher alcohol consumption because of the culture. For example, countries in asia have pretty high alcohol consumption purely because the culture there is heavily focused on drinking; therefore, there might no correlation between happiness ranking of a country and the amount of alcohol consumed.</p>
+<div id="tidying-data" class="section level3">
+<h3>Tidying Data</h3>
+<pre class="r"><code>library(tidyverse)
+
+happiness_index &lt;- read_csv(&quot;https://drive.google.com/uc?export=download&amp;id=1JVUgotLKc7rgJCLQY0fcRiJ5D-c9Dq-c&quot;)
+
+drinks &lt;- read_csv(&quot;https://drive.google.com/uc?export=download&amp;id=1LKsUDvrSrc6o9MEiBCAG9m7-5iP2shBZ&quot;)</code></pre>
+<p>The two datasets happiness_index and drinks were already tidy and so all I had to do was read them into the environment. However, I will be using pivot_longer and pivot_wider later on to show how I can tidy/untidy the datasets.</p>
+</div>
+<div id="joining-data" class="section level3">
+<h3>Joining Data</h3>
+<pre class="r"><code>inner_join(drinks, happiness_index, by = c(&quot;country&quot; = &quot;Country or region&quot;)) -&gt; full</code></pre>
+<p>I joined the two datasets using inner_join which allows for R to join the two datasets based on matches in both datasets. In this case, I decided to join happiness_index and drinks by country. However, since the variable country is named differently in both datasets, I used by = c(“country” = “Country or region”) in order to set those two variables equal to each other for joining.</p>
+<p>I decided to use inner_join because I only wanted matches in both datasets. If I had used left_join for example, it only would’ve displayed matches from the left and right datasets and dropped non matches from the right dataset. Using inner_join, countries that only exist in one dataset are dropped.</p>
+<p>To make things more convenient, I saved the joined dataset into a new dataset called full.</p>
+</div>
+<div id="wrangling" class="section level3">
+<h3>Wrangling</h3>
+<pre class="r"><code># Created new column for total number of servings of alcohol consumed 
+full %&gt;% group_by(country) %&gt;% mutate(total_servings = sum(beer_servings + spirit_servings + wine_servings)) -&gt; full 
+
+# Checked the number of columns and rows of joined dataset
+full %&gt;% glimpse()</code></pre>
+<pre><code>## Rows: 143
+## Columns: 15
+## Groups: country [143]
+## $ country                        &lt;chr&gt; &quot;Afghanistan&quot;, &quot;Albania&quot;, &quot;Algeria&quot;,...
+## $ beer_servings                  &lt;dbl&gt; 0, 89, 25, 193, 21, 261, 279, 21, 42...
+## $ spirit_servings                &lt;dbl&gt; 0, 132, 0, 25, 179, 72, 75, 46, 63, ...
+## $ wine_servings                  &lt;dbl&gt; 0, 54, 14, 221, 11, 212, 191, 5, 7, ...
+## $ total_litres_of_pure_alcohol   &lt;dbl&gt; 0.0, 4.9, 0.7, 8.3, 3.8, 10.4, 9.7, ...
+## $ continent                      &lt;chr&gt; &quot;Asia&quot;, &quot;Europe&quot;, &quot;Africa&quot;, &quot;South A...
+## $ `Overall rank`                 &lt;dbl&gt; 154, 107, 88, 47, 116, 11, 10, 90, 3...
+## $ Score                          &lt;dbl&gt; 3.203, 4.719, 5.211, 6.086, 4.559, 7...
+## $ `GDP per capita`               &lt;dbl&gt; 0.350, 0.947, 1.002, 1.092, 0.850, 1...
+## $ `Social support`               &lt;dbl&gt; 0.517, 0.848, 1.160, 1.432, 1.055, 1...
+## $ `Healthy life expectancy`      &lt;dbl&gt; 0.361, 0.874, 0.785, 0.881, 0.815, 1...
+## $ `Freedom to make life choices` &lt;dbl&gt; 0.000, 0.383, 0.086, 0.471, 0.283, 0...
+## $ Generosity                     &lt;dbl&gt; 0.158, 0.178, 0.073, 0.066, 0.095, 0...
+## $ `Perceptions of corruption`    &lt;dbl&gt; 0.025, 0.027, 0.114, 0.050, 0.064, 0...
+## $ total_servings                 &lt;dbl&gt; 0, 275, 39, 439, 211, 545, 545, 72, ...</code></pre>
+<pre class="r"><code># Since there were too many numeric variables, I selected only the ones I was interested in analyzing and created a new dataset
+full %&gt;% select(country, continent, total_servings, total_servings, Score, Generosity, &#39;Healthy life expectancy&#39;) -&gt; sub_full
+
+# I want to find out how many countries are in each continent in this dataset.
+sub_full %&gt;% group_by(continent) %&gt;% summarise(n_distinct(country))</code></pre>
+<pre><code>## # A tibble: 6 x 2
+##   continent     `n_distinct(country)`
+##   &lt;chr&gt;                         &lt;int&gt;
+## 1 Africa                           41
+## 2 Asia                             38
+## 3 Europe                           40
+## 4 North America                    12
+## 5 Oceania                           2
+## 6 South America                    10</code></pre>
+<pre class="r"><code># Now to analyze my data, I grouped by continent and created summary statistics for mean and standard deviation using pivot_longer and pivot_wider
+sub_full %&gt;% group_by(continent) %&gt;% select(is.numeric) %&gt;% summarise_all(funs(mean, sd, median)) %&gt;% arrange(desc(Score_mean), .by_group = TRUE) %&gt;% pivot_longer(contains(&quot;_&quot;)) %&gt;% separate(name, into = c(&quot;variable&quot;, &quot;statistic&quot;), sep = &quot;_(?=[^_]+$)&quot;) %&gt;% pivot_wider(names_from = statistic, values_from = value)</code></pre>
+<pre><code>## # A tibble: 24 x 5
+##    continent     variable                   mean        sd  median
+##    &lt;chr&gt;         &lt;chr&gt;                     &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt;
+##  1 Oceania       total_servings          501      62.2     501    
+##  2 Oceania       Score                     7.27    0.0559    7.27 
+##  3 Oceania       Generosity                0.331   0.00141   0.331
+##  4 Oceania       Healthy life expectancy   1.03    0.00707   1.03 
+##  5 Europe        total_servings          498.    138.      549    
+##  6 Europe        Score                     6.22    0.955     6.17 
+##  7 Europe        Generosity                0.163   0.0972    0.148
+##  8 Europe        Healthy life expectancy   0.925   0.101     0.970
+##  9 North America total_servings          272.    113.      279    
+## 10 North America Score                     6.09    0.943     6.22 
+## # ... with 14 more rows</code></pre>
+<pre class="r"><code># This code displays the quantiles of the selected variables from the sub dataset. Quantile also includes the min and max of the dataset.I then filtered out the Oceania in order to see the min, median, and max for all three variables.
+sub_full %&gt;% group_by(continent) %&gt;% select(total_servings, `Score`, `Healthy life expectancy`) %&gt;% summarise_all(quantile) %&gt;% filter(continent == &quot;Africa&quot;)</code></pre>
+<pre><code>## # A tibble: 5 x 4
+## # Groups:   continent [1]
+##   continent total_servings Score `Healthy life expectancy`
+##   &lt;chr&gt;              &lt;dbl&gt; &lt;dbl&gt;                     &lt;dbl&gt;
+## 1 Africa                 0  3.08                     0    
+## 2 Africa                17  3.98                     0.375
+## 3 Africa                45  4.46                     0.443
+## 4 Africa                86  4.68                     0.555
+## 5 Africa               504  5.89                     0.815</code></pre>
+<pre class="r"><code># This creates the correlation matrix between total servings of alcohol and other country variables
+x &lt;- cor(x = full$total_servings, y = full[7:14]) %&gt;% as.data.frame()
+x &lt;- x %&gt;% rownames_to_column(&quot;total_litres_alcohol&quot;) %&gt;% pivot_longer(-1, 
+    names_to = &quot;var2&quot;, values_to = &quot;correlation&quot;)
+x %&gt;% filter(correlation != 1) %&gt;% slice(which.max(correlation))</code></pre>
+<pre><code>## # A tibble: 1 x 3
+##   total_litres_alcohol var2           correlation
+##   &lt;chr&gt;                &lt;chr&gt;                &lt;dbl&gt;
+## 1 1                    GDP per capita       0.633</code></pre>
+<p>After joining both datasets, I used glimpse() to see that there are 143 observations/countries and 15 variables. I narrowed down the variables I would be interested in summarizing and created a sub dataset called sub_full. First I wanted to see how many countries are in each continent and so I counted the distinct number of countries in each group. I found that there are 2 countries in Oceania, 10 in South America, 12 in North America, 38 in Asia, 40 in Europe, and 41 in Africa. The continent Oceania has the highest mean for score, total servings of alcohol, generosity, and life expectancy. The respective means are 7.268 points, 501 servings of alcohol, 0.331 points, and 1.031 points. In addition to having the highest mean, the standard deviations for the four numeric variables for Oceania are the smallest, with generosity having the lowest standard deviation of 0.00141. But because there are few observations for Oceania, it would decrease statistical power and therefore, I’ll focus my attention on other continents.</p>
+<p>Africa had the lowest average happiness score of 4.379 and the lowest average total servings of alcohol of 80.756. The median was also calculated and the medians for the four variables for Oceania was the same as the means. The median for Africa for total servings of alcohol, score, generosity, and healthy life expectancy were 45, 4.461, 0.187, and 0.443 respectively. After finding that Africa had the lowest averages, I was interested in looking at the quantiles. From the 0th quantile to the 100th quantile, the values for the happiness scores are 3.083, 3.975, 4.461, 4.681, and 5.888 respectively. Since the 0th and 100th quantile are the min and max of the variable, it can also be confirmed that the minimum happiness score of a country in Africa is 3.083 and the maximum happiness score is 5.888. The median of variables for Africa can also be seen in the quantile function because the 50% quantile is the median. Using quantile resulted in the same median for Africa. After creating a correlation matrix between total servings of alcohol and the other numeric statistics from the happiness_index detailing GDP per capita, happiness score, overall rank, social support, etc, The greatest positive correlation was between total servings of alcohol and GDP per capita with a correlation of 0.6334. The most negative correlation was with overall rank with a -0.6184 correlation.</p>
+<ol style="list-style-type: decimal">
+<li>number of variables and observations</li>
+<li>number of distinct countries in each continent</li>
+<li>mean</li>
+<li>standard deviation</li>
+<li>median</li>
+<li>quantile</li>
+<li>min</li>
+<li>max</li>
+<li>correlation between total servings of alcohol and socioeconomic data</li>
+</ol>
+</div>
+<div id="visualizations" class="section level3">
+<h3>Visualizations</h3>
+<pre class="r"><code># Creating correlation heat map
+num_full &lt;- subset(full, select = -c(country, continent, total_servings))
+num_full %&gt;% cor() %&gt;% as.data.frame() %&gt;% rownames_to_column(&quot;var1&quot;) %&gt;% pivot_longer(-1, names_to = &quot;var2&quot;, values_to = &quot;correlation&quot;) %&gt;% ggplot(aes(var1, var2, fill = correlation)) +
+  geom_tile() + geom_text(aes(label=round(correlation,2)), color = &quot;white&quot;) + scale_x_discrete(guide = guide_axis(angle = 45))</code></pre>
+<p><img src="/project1_files/figure-html/unnamed-chunk-4-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>Above is the correlation heatmap for all of my numeric variables except for total number of servings of alcohol. This gives you a quick overview of variables that seem to be correlated to each other. For example, from the heatmap it can be seen that countries with high social support also tend to have a high score.</p>
+<pre class="r"><code># Plot of total servings of alcohol versus score and colored by continent. This plot has its theme and color changed and the number of ticks on the x axis increased from 5 to 7
+ggplot(full, aes(total_servings, Score, color = continent)) + geom_point() +
+  scale_color_brewer(palette = &quot;Set2&quot;) + 
+  ggtitle(&quot;Total Servings of Alcohol and Score on Happiness Index&quot;) + 
+  xlab(&quot;Total Servings of Alcohol&quot;) + ylab(&quot;Score on Happiness Index&quot;) + 
+  theme_dark() +
+  scale_x_continuous(&quot;Total Servings of Alcohol&quot;, breaks = c(0, 100, 200, 300, 400, 500, 600), labels=c(0, 100, 200, 300, 400, 500, 600))</code></pre>
+<p><img src="/project1_files/figure-html/unnamed-chunk-5-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>In this scatterplot graphing total servings of alcohol of each country against its score, There seems to me a slight positive correlation between the two variables depending on continent. For example, when looking at Europe, higher total servings of alcohol usually resulted in a high score on the happiness index. Most African countries both had lower total servings of alcohol and scored lower on the happiness index. Looking at the entire spread of datapoints, there appears to be a relatively positive correlation.</p>
+<pre class="r"><code># Second plot with summary statistic of mean of beer servings and mean generosity goruped by country
+full %&gt;% select(continent, beer_servings, Generosity) %&gt;% group_by(continent) %&gt;% summarise_all(mean) -&gt; plot2
+full %&gt;% ggplot(aes(x = beer_servings, y = Generosity, fill = continent)) + 
+  geom_boxplot() + 
+  geom_point(data = plot2, stat = &quot;summary&quot;, fun = mean, aes(x = beer_servings, y = Generosity, color = continent)) + 
+  scale_color_brewer(palette = &quot;Set3&quot;) + ggtitle(&quot;Mean Beer Servings vs Mean Generosity by Continent Boxplot&quot;) + xlab(&quot;Beer Servings&quot;) + ylab(&quot;Generosity&quot;)</code></pre>
+<p><img src="/project1_files/figure-html/unnamed-chunk-6-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>I decided that for my second plot I would want to use a boxplot to see the distribution of beer servings and generosity score by continent. This would give the min, median, and max of generosity by continent while also varying by beer servings. Then I also added a scatterplot on top of the boxplot that plotted the mean of beer servings and mean generosity per country. Looking at the overlap of the scatterplot and boxplot, it can be seen that most of the observations on the scatterplot doesn’t overlap with the boxplots. This can be explained by the fact that the boxplots per continent has a lot of variation. There is also the issue that there aren’t many observations for Oceania so the boxplot for it is very small in comparison to other countries, which would decrease its statistical power. In North America and Asia there are a few outliers which affect the mean of the generosity score and the mean of the number of beer servings.</p>
+</div>
+<div id="dimensionality-reduction" class="section level3">
+<h3>Dimensionality Reduction</h3>
+<pre class="r"><code># PCA performed --&gt; chose comp. 6 that explains 91% variance. Scoring high on PC6 indicates that the generosity is high and that perceptions of corruption are low. In terms of type of alcoholic drinks, the number of spirit servings would also be low while wine and beer are slightly high in number.
+num_full %&gt;% scale() -&gt; num_full
+rownames(num_full) &lt;- full$country
+pca_full &lt;- princomp(num_full)
+names(pca_full)</code></pre>
+<pre><code>## [1] &quot;sdev&quot;     &quot;loadings&quot; &quot;center&quot;   &quot;scale&quot;    &quot;n.obs&quot;    &quot;scores&quot;   &quot;call&quot;</code></pre>
+<pre class="r"><code>summary(pca_full, loadings = TRUE)</code></pre>
+<pre><code>## Importance of components:
+##                           Comp.1    Comp.2     Comp.3     Comp.4     Comp.5
+## Standard deviation     2.4695803 1.3759522 0.98523678 0.89475948 0.77648358
+## Proportion of Variance 0.5118147 0.1588814 0.08146061 0.06718604 0.05059773
+## Cumulative Proportion  0.5118147 0.6706961 0.75215673 0.81934277 0.86994050
+##                            Comp.6     Comp.7     Comp.8     Comp.9    Comp.10
+## Standard deviation     0.68988963 0.58436384 0.51551335 0.47629771 0.39132083
+## Proportion of Variance 0.03994162 0.02865716 0.02230213 0.01903809 0.01285087
+## Cumulative Proportion  0.90988212 0.93853928 0.96084141 0.97987950 0.99273036
+##                           Comp.11      Comp.12
+## Standard deviation     0.27969806 0.0916219530
+## Proportion of Variance 0.00656516 0.0007044749
+## Cumulative Proportion  0.99929553 1.0000000000
+## 
+## Loadings:
+##                              Comp.1 Comp.2 Comp.3 Comp.4 Comp.5 Comp.6 Comp.7
+## beer_servings                 0.301  0.279  0.255         0.395  0.153  0.459
+## spirit_servings               0.210  0.357         0.655 -0.154 -0.418 -0.292
+## wine_servings                 0.280         0.465 -0.354 -0.250  0.348 -0.473
+## total_litres_of_pure_alcohol  0.300  0.307  0.451  0.127  0.129              
+## Overall rank                 -0.368  0.140  0.200                      -0.123
+## Score                         0.368 -0.165 -0.175                       0.149
+## GDP per capita                0.352        -0.221 -0.149 -0.230              
+## Social support                0.341        -0.275  0.114                0.225
+##                              Comp.8 Comp.9 Comp.10 Comp.11 Comp.12
+## beer_servings                        0.375  0.195   0.444         
+## spirit_servings              -0.118                 0.300         
+## wine_servings                       -0.252          0.320         
+## total_litres_of_pure_alcohol               -0.112  -0.752         
+## Overall rank                  0.528  0.118                 -0.695 
+## Score                        -0.489 -0.160                 -0.716 
+## GDP per capita                0.342  0.339 -0.713                 
+## Social support                0.558 -0.614  0.202                 
+##  [ reached getOption(&quot;max.print&quot;) -- omitted 4 rows ]</code></pre>
+<pre class="r"><code># Plot showing scores of PCA
+results &lt;- full %&gt;% as.data.frame %&gt;% 
+  mutate(PC1 = pca_full$scores[, 1], PC2 = pca_full$scores[, 2], PC3 = pca_full$scores[, 3], PC4 = pca_full$scores[, 4], PC5 = pca_full$scores[, 5], PC6 = pca_full$scores[, 6])
+results %&gt;% ggplot(aes(PC1, PC2, color = continent)) + geom_point()</code></pre>
+<p><img src="/project1_files/figure-html/unnamed-chunk-7-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>results %&gt;% ggplot(aes(PC3, PC4, color = continent)) + geom_point()</code></pre>
+<p><img src="/project1_files/figure-html/unnamed-chunk-7-2.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>results %&gt;% ggplot(aes(PC5, PC6, color = continent)) + geom_point()</code></pre>
+<p><img src="/project1_files/figure-html/unnamed-chunk-7-3.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>pca_full$scores[,1:4] %&gt;% as.data.frame %&gt;% top_n(3, Comp.3)</code></pre>
+<pre><code>##            Comp.1     Comp.2   Comp.3     Comp.4
+## Burundi -3.699728  0.3918887 2.210194 -0.4678550
+## Haiti   -3.011285  1.2605935 2.052279  3.5203771
+## Rwanda  -2.232025 -1.9270542 2.608284 -0.3922516</code></pre>
+<p>Using PCA, I was able to reduce the number of closely related variables and form a more concise understanding of my dataset. In this case after selecting only the numeric variables of my fully joined dataset, which created num_ful, I normalized the results to standardize the range of observations. Then I am able to run a PCA on my numeric dataset and see which component describes the variation in my data the best. After looking at the cumulative proportion, I decided that PC 6 was going to describe the variance in my data the best. PC 6 explained 90.99% of the variance in my dataset and that variance was mainly affected by the different number of servings of the three different alcohol types and two socialeconomic statistics, generosity and the perceptions of corruption choices. Out of these 5 variables, spirit servings, generosity, and perceptions of corruption, which had eigen values of -0.418, 0.411, and -0.695 respectively, affected my dataset the most. If PC 6 was a high value, that means that people would’ve drank a less servings of spirit, however, they would also be more generous and perceive less corruption in their country. On the other hand if PC 6 was a low value that would indicate that people drank more servings of the other two alcohols, beer and wine. They would also be less generous and perceive their country to be more corrupt.</p>
+<p>Looking at the three different sctterplots graphing the interaction between the different principle components, we can get a better idea of how the data varies. When graphing PC 1 aginst PC 2, it can be seen that most of the points have a larger variation on PC 1 based on continent and therefore some small clusters can be seen. Specifically, Europe and Africa are spread out very differently acorss PC 1 while some of the other continents are jumbled in the middle. When looking at the countries who score highest on PC 1, all of them are European countries who are known for scoring high on the happiness index. Now looking at PC 3 graphed against PC 4, it can be seen that countries who ranked high have a consumed more liters of alcohol, especially wine, and have higher perceptions of corruption. In this case PC 3 is not as good as PC 1 in creating clusters of observations, however, there is some clustering to be seen. Specifically, it can be seen now that North America and Asia have scored lower on PC 3 while Africa and Europe are more spread out. Finally looking at PC 5 versus PC 6, there is virtually no clustering that can be found since the different continents are plotted very closely to each other. If some grouping is to be seen, it would be that Europe scored slightly lower on PC 5 and South America and Africa scored slightly higher. This would indicate that people in Africa and South America drank less servings of spirit than other alcohols and that they perceive their country to be less corrupt while also being more generous.</p>
+</div>
+
+            
+        <hr>         <div class="related-posts">
+                <h5>Related Posts</h5>
+                
+              </div> 
+            </div>
+          </div>
+
+   <hr>  <div class="disqus">
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+
+    (function() {
+      
+      
+      if (window.location.hostname == "localhost")
+        return;
+
+      var disqus_shortname = '';
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  <a href="http://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div> 
+        </div>
+      </div>
+    </div>
+
+    
+    <footer>
+  <div id="footer">
+    <div class="container">
+      <p class="text-muted">&copy; All rights reserved. Powered by <a href="https://gohugo.io/">Hugo</a> and
+      <a href="http://www.github.com/nurlansu/hugo-sustain/">sustain</a> with ♥</p>
+    </div>
+  </div>
+</footer>
+<div class="footer"></div>
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+<script src="/js/docs.min.js"></script>
+<script src="/js/main.js"></script>
+
+<script src="/js/ie10-viewport-bug-workaround.js"></script>
+
+
+    
+  </body>
+</html>

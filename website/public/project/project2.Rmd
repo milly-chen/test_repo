@@ -1,8 +1,265 @@
 ---
-title: "Project 2"
-author: "Me"
-date: "2020-12-01"
+title: "Modeling Medical Insurance Data"
+author: "Melissa Chen"
+date: "11/17/2020"
 output: html_document
 ---
 
-## Test Project 2
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = "center", warning = F, message = F,
+tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100))
+```
+
+### Introducing Dataset
+```{r}
+library(tidyverse)
+insurance <- read.csv("https://drive.google.com/uc?export=download&id=1wYKOxnrDBJlyefVwvyUIzAmGn_VMpE9M")
+glimpse(insurance)
+insurance <- insurance[,c(1,2,3,7,4,5,6)]
+
+# dummy coding
+insurance <- insurance %>% mutate(sex=ifelse(insurance$sex=="female",1,0),smoker =ifelse(insurance$smoker=="yes", 1, 0))
+```
+
+This dataset includes variables for patient age, sex, BMI, children, smoker, region, and charges. Age, BMI (kg/m^2), and sex are pretty straight forward variables and require no further explaination. However, the smoker variable indicates whether the patient smokes and the region variable indicates which part of the US the patient is from. Children refers to the number of children the patient has and charges in dollars indicates how much a patient was billed by their health insurance. I dummy coded sex and smoking status to where 0 in either group indicates that the patient is a male or that the patient is not a smoker. There are 1338 observations in this dataset.
+
+### MANOVA Test
+```{r}
+# running MANOVA
+man1 <- manova(cbind(charges, bmi, children, age) ~ region, data = insurance)
+summary(man1)
+## multivariate normality
+ggplot(insurance, aes(x = charges, y = bmi)) + geom_point(alpha = .5) + geom_density_2d() + facet_wrap(~region) 
+## variance-covariance homogeneity
+covmats <- insurance %>% group_by(region) %>% do(covs=cov(.[3:4]))
+for(i in 1:4){print(as.character(covmats$region[i])); print(covmats$covs[[i]])}
+## linear relationship btw DV
+ggplot(insurance, aes(charges, bmi)) + geom_point() + geom_smooth(method=lm) 
+
+# running univariate ANOVA
+summary.aov(man1)
+insurance %>% group_by(region) %>% summarize(mean(bmi), mean(charges))
+
+# running post hoc t test
+pairwise.t.test(insurance$bmi, insurance$region, p.adj="none") # for BMI
+pairwise.t.test(insurance$charges, insurance$region, p.adj="none") # for charges
+
+#bonferroni
+0.05/17
+
+#probability of type I
+1-(0.95^17)
+```
+
+Since I have computed 17 tests in total (1 MANOVA, 4 ANOVA, 12 t tests), the adjusted significance level is now 0.00294. There is a 0.5818 chance of performing a type I error if the significance level was not adjusted.
+
+Performing a MANOVA test to see whether differences in regionality of patients show a mean difference in the numerical variables charges, BMI, children, and age. The resulting p value is extremely small (p < 2.2e-16) and indicates that there is a mean difference amongst the tested numeric variables based on regionality. 
+
+Therefore, an ANOVA test was computed and there was only significance in the variables BMI and charges. This indicates that there is a mean difference in BMI and charges based on the region of the US a patient is from. The p value of the ANOVA tests for BMI and charges is <2.2e-16 and 0.0308 respectively. When comparing the mean BMI and charges from each region, the southeast and southwest (33.3559, 30.5966) states have a higher BMI than the northeast and northwest (29.1735, 29.1997). The southeast part of the US have the highest mean charges on their health insurance of 14735.41 dollars while the southwest have the lowest mean charges of 12346.94 dollars.
+
+Pairwise t tests were performed on both BMI and charges and compared to our corrected significance level of 0.00294. For BMI, there was a significant mean difference between the southeast to the northeast (p < 2.2e-16), northwest (p < 2.2e-16), and southwest (p = 8.5045e-10) and between the southwest to the northeast (p = 0.0019) and northwest (p = 0.0023) parts of the US. For charges, there was a significant mean difference between the southeast and southwest (p = 0.0097) parts of the US. 
+
+MANOVA assumptions include multivariate normality and variance-covariance homogeneity. When plotting a density plot to see multivariate normality, there are other parts of the graph that has high number of points (not concentrated). Therefore, this dataset fails the multivariate normality assumption. Next, looking at variance-covariance homogeneity, there are differences in variance and covariance from each region. Therefore, this datase would also fail the variance-covariance homogeneity assumption. Another assumption that MANOVA makes is that there is a linear relationship between the two dependent variables, which in this case is BMI and charges. Graphing the two variables does show that there is a linear trend and so this assumption is met. Of course, there are other assumptions that the MANOVA test makes, but these 3 assumptions were more interesting to look and analyze.
+
+### Randomization Test
+```{r}
+insurance%>%group_by(sex)%>%
+  summarize(means=mean(charges))%>%summarize(`mean_diff`=diff(means))
+
+rand_dist<-vector() #create vector to hold diffs under null hypothesis
+
+for(i in 1:5000){
+new<-data.frame(charges=sample(insurance$charges),sex=insurance$sex) #scramble columns
+rand_dist[i]<-mean(new[new$sex=="1",]$charges)-   
+              mean(new[new$sex=="0",]$charges)} 
+{hist(rand_dist,main="",ylab=""); abline(v = c(-1387.17233389, 1387.17233389),col="red")}
+mean(rand_dist>1387.17233389 | rand_dist< -1387.17233389)
+```
+
+For my randomization test I decided to test if there was a mean difference in charges on a patients medical bill based on sex. My null hypothesis is that there is no mean difference  between the medical bill charges of a female and male. My alternative hypothesis is that there is a mean difference between the medical bill charges of a female and male. I found that female patients have a mean charge of 1387.17 lower than male patients charges. 
+
+I then created a histogram showing the mean differences after randomization (null hypothesis plot) and also added on vertical lines to represent the mean difference (test statistic) between females and males. The resulting p value (p = 0.0352) after randomzation indicates that I can reject the null hypothesis to conclude that there is a significant mean difference between the medical charges of females and males. 
+
+### Linear Regression Model
+```{r}
+library(sandwich); library(lmtest)
+
+# lm
+insurance$bmi_c <- insurance$bmi - mean(insurance$bmi)
+insurance$charges_c <- insurance$charges - mean(insurance$charges)
+insurance$children_c <- insurance$children - mean(insurance$children)
+lm_fit <- lm(charges_c~bmi_c*children_c, data = insurance)
+summary(lm_fit)
+
+# plotting fit
+insurance %>% ggplot(aes(bmi_c,charges,color=children))+geom_point()+geom_smooth(method="lm", se=F)
+
+# assumptions
+## linearity
+lm_resids <- lm_fit$residuals; lm_fitvals<- lm_fit$fitted.values
+ggplot()+geom_point(aes(lm_fitvals,lm_resids))+geom_hline(yintercept=0, col="red")
+
+## normality
+ggplot()+geom_histogram(aes(lm_resids))
+
+## homoskedasticity 
+bptest(lm_fit)
+coeftest(lm_fit, vcov = vcovHC(lm_fit))
+```
+
+Looking at the coefficients from this linear regression before robust standard errors, when controlling for children, every 1 unit increase in centered BMI corresponds to a 362.28 dollar amount increase in charges on the patients medical bill. The coefficient for  children states that for every increase in number of children the patient has while holding centered BMI constant, there will be a corresponding 659.28 dollar amount increase in health insurance charges. Finally, the interaction coefficient indicates that the slope for BMI on charges is 20.75 higher for every unit increase in children a patient has. 
+
+Looking at the assumptions of the linear regression model, the linearity assumption failed because there was not a linear trend when graphing the residuals against the fitted values. The normality of the regression failed since the histogram does not show a normal distribution of observations. Testing for homoskedasticity also failed sice the p-value was less than 0.05 so the standard errors were adjusted. After applying robust standard errors, the coefficients of the two independent variables and their interaction were pretty much the same as before. Both BMI and children without any interactions are significant on charges; however, there was no significant interaction between children and BMI on charges. The significance results were exactly the same prior to applying robust standardr errors.
+
+## Bootstrapped Linear Regression
+```{r}
+set.seed(348)
+samp_distn <- replicate(5000, {
+  boot_dat <- sample_frac(insurance, replace=T)
+  fit <- lm(charges_c ~ bmi_c*children_c, data = boot_dat)
+  coef(fit)
+})
+
+samp_distn %>% t %>% as.data.frame %>% summarize_all(sd)
+
+samp_distn %>% t %>% as.data.frame %>% gather %>% group_by(key) %>%
+  summarize(lower=quantile(value,.025), upper=quantile(value,.975))
+```
+
+After bootstrapping my standard errors by randomization, there was a slight change comparing my bootstrapped SEs to my original SEs. The bootstrapped SEs compared to the orignial SEs for BMI controlling for children and the interaction of BMI and number of children increased from 53.1717 to 57.3682 and 44.6820 to 46.8793 respectively. However, the original SE for children controlling for BMI decreased in the bootstrapped SEs from 268.9973 to 261.4722.
+
+There was not much difference between the robust SEs and the bootstrapped SEs. The robust SE to the bootstrapped SE for BMI when controlling for BMI was 57.8085 and 56.9685 respectively. For children when controlling for BMI, the robust SE was 258.6864 and the bootstrapped SE was 257.5905. The interaction of BMI and children was mostly the same for both the robust SEs and the bootstrapped SEs.
+
+Looking at the 95% confidence interval, 0 was not a value within the 95% CI for BMI when controlling for children and children when controlling for BMI, meaning that there is a significant difference on charge depending on the patient's BMI or the number of children they have. On the other hand, 0 was a value within the range of the 95% CI for the interaction of BMI and children. This interaction is therefore not significant on charges. 
+
+### Logistic Regression
+```{r}
+lr_fit <- glm(smoker ~ bmi*charges, data = insurance, family = "binomial")
+summary(lr_fit)
+exp(coef(lr_fit))
+
+# confusion matrix and AUC
+prob <- predict(lr_fit,type="response")
+table(predict=as.numeric(prob>.5),truth=insurance$smoker)%>%addmargins
+220/274 #TPR
+1029/1064 #TNR
+220/255 #precision
+(1029+220)/1338 #accuracy
+
+class_diag <- function(probs,truth){
+  #CONFUSION MATRIX: CALCULATE ACCURACY, TPR, TNR, PPV
+  tab<-table(factor(probs>.5,levels=c("FALSE","TRUE")),truth)
+  acc=sum(diag(tab))/sum(tab)
+  sens=tab[2,2]/colSums(tab)[2]
+  spec=tab[1,1]/colSums(tab)[1]
+  ppv=tab[2,2]/rowSums(tab)[2]
+  f1=2*(sens*ppv)/(sens+ppv)
+
+  if(is.numeric(truth)==FALSE & is.logical(truth)==FALSE) truth<-as.numeric(truth)-1
+  
+  #CALCULATE EXACT AUC
+  ord<-order(probs, decreasing=TRUE)
+  probs <- probs[ord]; truth <- truth[ord]
+  
+  TPR=cumsum(truth)/max(1,sum(truth)) 
+  FPR=cumsum(!truth)/max(1,sum(!truth))
+  
+  dup<-c(probs[-1]>=probs[-length(probs)], FALSE)
+  TPR<-c(0,TPR[!dup],1); FPR<-c(0,FPR[!dup],1)
+  n <- length(TPR)
+  auc<- sum( ((TPR[-1]+TPR[-n])/2) * (FPR[-1]-FPR[-n]) )
+
+  data.frame(acc,sens,spec,ppv,f1,auc)
+}
+class_diag(prob, insurance$smoker)
+
+# ggplot
+insurance$logit <- predict(lr_fit,type="link")
+insurance %>% ggplot() + geom_density (aes(logit,color=smoker,fill=smoker), alpha=.4)+
+  theme(legend.position=c(.85,.85))+geom_vline(xintercept=0)+xlab("logit (log-odds)")+
+  geom_rug(aes(logit,color=smoker))
+
+# ROC
+library(plotROC)
+ROCplot<-ggplot(insurance)+geom_roc(aes(d=smoker,m=prob), n.cuts=0) 
+ROCplot
+calc_auc(ROCplot)
+```
+
+The coefficients on my logistical regression indicates the log odds of a patient being a smoker based on their BMI and charges on their health insurance. For every unit increase in BMI when holding charges constant, the odds of a patient being a smoker decrease by a factor of 0.7364. When holding BMI constant, every dollar increase in charges, the odds of a patient being a smoker increases by a factor of 1.0003. The interaction of BMI and charges increases the odds of the patient being a smoker by a factor of 1.000001.
+
+The confusion matrix shows that the true positive rate is 0.8029 (220/274) and the true negative rate is 0.9671 (1029/1064); meaning that the probability of the detecting if the patient is a smoker if they actually are a smoker is 0.8029 and that the probability of detecting if the patient is a not a smoker if they actually don't smoke. The precision value is 0.8627 (220/255) and accuracy is 0.9334 (1249/1338). Precision indicates that the proportion of patients that classified as smoking and actually smoke is 0.8627. Accuracy is the total number of correct predictions out of all outcomes and in this case. 
+
+The results for accuracy, sensitivity, specificity, and precision can also be obtained from the class_diag function, and they are exactly the same as the values I calculated by hand. The class_diag function also reports the AUC of the model and in this case it is 0.9823, meaning that this model is great at predicting our overall results.
+
+The ROC curve plots my true positives against my false positive. The closer the ROC curve resembles a right angle, the more accurate the model is at predicting if a patient is a smoker. Since my curve looks similar to a right angle, it can be concluded that my model/fit is pretty accurate at distinguishing smokers from non smokers. Additionally, the AUC can also be calculated by summing up the total area under the ROC curve. The AUC is 0.9823 and exactly the same value as calculated from the class_diag function.
+
+### Logistical Regression All
+```{r}
+# fit and class diagnostic
+all_fit <- glm(smoker ~ ., data = insurance, family = "binomial")
+summary(all_fit)
+prob <- predict(all_fit,type="response")
+class_diag(prob, insurance$smoker)
+
+# 10 fold
+set.seed(348)
+k=10
+
+data <- insurance[sample(nrow(insurance)),]
+folds <- cut(seq(1:nrow(insurance)),breaks=k,labels=F)
+
+diags<-NULL
+for(i in 1:k){
+  train<-data[folds!=i,] 
+  test<-data[folds==i,]
+  
+  truth<-test$smoker
+  
+  fit<-glm(smoker ~ ., data=train, family="binomial")
+  
+  probs<-predict(fit,newdata = test,type="response")
+  
+  diags<-rbind(diags,class_diag(probs,truth))
+}
+summarize_all(diags,mean)
+
+# lasso
+library(glmnet)
+x<-model.matrix(smoker ~ -1+., data=insurance) #the -1 drops the intercept
+x<-scale(x)
+y<-as.matrix(insurance$smoker)
+
+cv<-cv.glmnet(x,y, family="binomial")
+lasso<-glmnet(x,y,family="binomial",lambda=cv$lambda.1se)
+coef(lasso)
+
+# 10 fold with lasso
+k=10
+
+data <- insurance[sample(nrow(insurance)),]
+folds <- cut(seq(1:nrow(insurance)),breaks=k,labels=F)
+
+diags<-NULL
+for(i in 1:k){
+  train<-data[folds!=i,] 
+  test<-data[folds==i,]
+  
+  truth<-test$smoker
+  
+  fit<-glm(smoker ~ . - region, data=train, family="binomial")
+  
+  probs<-predict(fit,newdata = test,type="response")
+  
+  diags<-rbind(diags,class_diag(probs,truth))
+}
+summarize_all(diags,mean)
+```
+
+Fitting all variables to predict for whether a patient smokes or not yielded an accuracy of 0.9656, sensitivity of 0.9708, specificity of 0.9642, precision of 0.875, and AUC of 0.9862 indicating that this model/fit is good at predicting smoker status from all variables. These class diagnostic results were actually quite similar to those in the previous logistic regression with only two variables. 
+
+Using the 10 fold CV, the mean of the accuracy, sensitivity, specificity, precision, and AUC is 0.9574, 0.9306, 0.9624, 0.8644, and 0.9854 respectively. Compared to the in sample class diagnostics, the out of sample diagnostics were all slightly lower, but not by much. This makes sense since I am training different parts of the data and modeling it, which will make it less accurate since it's not completely based on the data. However, even with out sample modeling, the resulting model is great since the AUC is still really high.
+
+Using lasso, I can identify the most important predictors of the smoker variable. Age, sex, BMI, charges, and children are significant in the end while region can be disregarded. 
+
+After removing region as a predictor from the regression model, the resulting accuracy, sensitivity, specificity, precision, and AUC are 0.9588, 0.9414, 0.9634, 0.8697, and 0.9849 respectively. Comparing this out of sample regression with the in sample original regression with all variables, accuracy, sensitivity, and precision decreased while specificity, precision, and AUC stayed around the same. On the other hand, when comparing the lassoed out of sample model to the full out of sample model there is not much difference between the class diagnostics. The largest change was in the sensitivity where the lassoed out of sample regression had a higher sensitivity. Overall, all three models were good fits of the data and are able to predict quite accurately whether a patient is a smoker.

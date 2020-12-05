@@ -1,0 +1,61 @@
+---
+title: Python vs R
+author: ''
+date: '2020-12-05'
+slug: python-vs-r
+categories: []
+tags: []
+description: ''
+---
+Learning about data wrangling was tough enough this semester, but throw in some python and now my head is really spinning. During the last few lectures, the most surprising thing was that you can actually code python in RStudio! This can be done by creating python code chunks. 
+
+First ensure the "reticulate" package has been installed and now let's try some python coding! Fingers crossed! Hopefully it works.
+
+```{python}
+import pandas as pd
+quakes=pd.read_csv("https://vincentarelbundock.github.io/Rdatasets/csv/datasets/quakes.csv",index_col=0)
+
+quakes
+```
+
+Great! So as you can see, in the code chunk above, I imported the quakes dataset using pandas and the output shows the first five rows of the dataset and the columns. Now lets actually try to get some minimums, maximums, means, and medians from both depth and magnitude.
+
+```{python}
+import numpy as np
+
+np.min(quakes.mag)
+np.max(quakes.mag)
+np.mean(quakes.mag)
+np.median(quakes.mag)
+
+np.min(quakes.depth)
+np.max(quakes.depth)
+np.mean(quakes.depth)
+np.median(quakes.depth)
+```
+
+Tada!! The code worked and you can see 8 outputs that correspond to each of the 8 lines of code written. The above examples and codes were taken straight out of HW 10 of SDS 348M but does a fantastic job as introducing the basics of python.
+
+But now the question is, how can R and python talk to each other across code chunks? Let's first create some code in an r chunk.
+
+```{r}
+library(reticulate)
+name<-"melissa"
+```
+
+Now let's create the python code chunk.
+
+```{python}
+name="chen"
+print(r.name,name)
+```
+The code chunk below shows how in a python code chunk, you can recall objects in r using the "r." to get an output. You can do the same in the r code chunk!
+
+```{r}
+cat(c(name, py$name))
+```
+The "name" references the name object in r, but the py$name indicates the name value in python. As seen, both python and r can communicate and share information across code chunks!
+
+After all that coding and stress (because I'm scared my website will just suddenly crash), go check out Mao Buyi's album on Spotify! I played this album in the background during this project and it helped me stay calm and focused.
+
+![](https://t2.genius.com/unsafe/771x0/https%3A%2F%2Fimages.genius.com%2F805ebc3f5dfcf125d04ade0fb6dd8051.1000x1000x1.jpg)

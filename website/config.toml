@@ -11,10 +11,10 @@ theme = "hugo-sustain"
   post = "/post/:year/:month/:day/:slug"
 
 [params]
-  avatar = "IMG_7282.jpg"
+  avatar = "IMG_7282_crop.jpg"
   author = "Melissa Chen"
-  occupation = "Software Engineer"
-  about = "I love all things computer science and maths."
+  occupation = "student at the University of Texas at Austin"
+  about = "I'm currently an undergraduate Biology major with a concentration in genetics! In the future I aspire to become a genetic counselor."
 
   # Custom assets can be linked with their paths relative to static/
   custom_css = []
@@ -23,9 +23,9 @@ theme = "hugo-sustain"
 [params.social]
   Github        = "milly-chen"
   Email         = "melissa.milly.chen@gmail.com"
-#  Twitter       = "username"
+# Twitter       = "username"
   LinkedIn      = "melissa-milly-chen"
-  Instagram     = "umilly.chen"
+  Instagram     = "milly.chen"
 #  Stackoverflow = "username"
 #  Medium        = "username"
 #  Telegram      = "username"

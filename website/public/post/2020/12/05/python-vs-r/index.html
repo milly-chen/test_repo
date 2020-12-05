@@ -1,0 +1,67 @@
+---
+title: Python vs R
+author: ''
+date: '2020-12-05'
+slug: python-vs-r
+categories: []
+tags: []
+description: ''
+---
+
+<link href="index_files/anchor-sections/anchor-sections.css" rel="stylesheet" />
+<script src="index_files/anchor-sections/anchor-sections.js"></script>
+
+
+<p>Learning about data wrangling was tough enough this semester, but throw in some python and now my head is really spinning. During the last few lectures, the most surprising thing was that you can actually code python in RStudio! This can be done by creating python code chunks.</p>
+<p>First ensure the “reticulate” package has been installed and now let’s try some python coding! Fingers crossed! Hopefully it works.</p>
+<pre class="python"><code>import pandas as pd
+quakes=pd.read_csv(&quot;https://vincentarelbundock.github.io/Rdatasets/csv/datasets/quakes.csv&quot;,index_col=0)
+
+quakes</code></pre>
+<pre><code>##         lat    long  depth  mag  stations
+## 1    -20.42  181.62    562  4.8        41
+## 2    -20.62  181.03    650  4.2        15
+## 3    -26.00  184.10     42  5.4        43
+## 4    -17.97  181.66    626  4.1        19
+## 5    -20.42  181.96    649  4.0        11
+## ...     ...     ...    ...  ...       ...
+## 996  -25.93  179.54    470  4.4        22
+## 997  -12.28  167.06    248  4.7        35
+## 998  -20.13  184.20    244  4.5        34
+## 999  -17.40  187.80     40  4.5        14
+## 1000 -21.59  170.56    165  6.0       119
+## 
+## [1000 rows x 5 columns]</code></pre>
+<p>Great! So as you can see, in the code chunk above, I imported the quakes dataset using pandas and the output shows the first five rows of the dataset and the columns. Now lets actually try to get some minimums, maximums, means, and medians from both depth and magnitude.</p>
+<pre class="python"><code>import numpy as np
+
+np.min(quakes.mag)</code></pre>
+<pre><code>## 4.0</code></pre>
+<pre class="python"><code>np.max(quakes.mag)</code></pre>
+<pre><code>## 6.4</code></pre>
+<pre class="python"><code>np.mean(quakes.mag)</code></pre>
+<pre><code>## 4.6204</code></pre>
+<pre class="python"><code>np.median(quakes.mag)</code></pre>
+<pre><code>## 4.6</code></pre>
+<pre class="python"><code>np.min(quakes.depth)</code></pre>
+<pre><code>## 40</code></pre>
+<pre class="python"><code>np.max(quakes.depth)</code></pre>
+<pre><code>## 680</code></pre>
+<pre class="python"><code>np.mean(quakes.depth)</code></pre>
+<pre><code>## 311.371</code></pre>
+<pre class="python"><code>np.median(quakes.depth)</code></pre>
+<pre><code>## 247.0</code></pre>
+<p>Tada!! The code worked and you can see 8 outputs that correspond to each of the 8 lines of code written. The above examples and codes were taken straight out of HW 10 of SDS 348M but does a fantastic job as introducing the basics of python.</p>
+<p>But now the question is, how can R and python talk to each other across code chunks? Let’s first create some code in an r chunk.</p>
+<pre class="r"><code>library(reticulate)
+name&lt;-&quot;melissa&quot;</code></pre>
+<p>Now let’s create the python code chunk.</p>
+<pre class="python"><code>name=&quot;chen&quot;
+print(r.name,name)</code></pre>
+<pre><code>## melissa chen</code></pre>
+<p>The code chunk below shows how in a python code chunk, you can recall objects in r using the “r.” to get an output. You can do the same in the r code chunk!</p>
+<pre class="r"><code>cat(c(name, py$name))</code></pre>
+<pre><code>## melissa chen</code></pre>
+<p>The “name” references the name object in r, but the py$name indicates the name value in python. As seen, both python and r can communicate and share information across code chunks!</p>
+<p>After all that coding and stress (because I’m scared my website will just suddenly crash), go check out Mao Buyi’s album on Spotify! I played this album in the background during this project and it helped me stay calm and focused.</p>
+<p><img src="https://t2.genius.com/unsafe/771x0/https%3A%2F%2Fimages.genius.com%2F805ebc3f5dfcf125d04ade0fb6dd8051.1000x1000x1.jpg" /></p>

@@ -1,8 +1,138 @@
 ---
-title: "Project 1"
-author: "Me"
-date: "2020-12-01"
-output: html_document
+title: "Analysis of Happiness Score and Alcohol Consumption per Country"
+author: "Melissa Chen"
+date: "9/23/2020"
+output:
+  pdf_document: default
+  html_document: default
 ---
 
-## Test Project 1
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = "center", warning = F, message = F,
+tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100))
+```
+
+The two datasets I chose are about the happiness index of countries (2019) and the average alcohol servings of countries. I got this dataset from kaggle and the world happiness report.  The happiness_index dataset includes countries, their rank in happiness, the happiness score, GPD per capita, social support, healthy life expectancy, freedom to make life choices, generosity, and perceptions of corruption. These variables were calculated by surverying citizens of each country on each statistic and using a complex formula to calculate the score of happiness index to get the rank of each country. 
+
+The second dataset I have is about the average amount of alcohol servings consumed per alcohol type of each country. This dataset was obtained from FiveThirtyEight and also includes the continent each country is from and calculated the average liters of alcohol consumed using the previous variables mentioned. The data for amount of alcohol consumed per serving is compiled from the WHO. 
+
+Originally, I wanted to find analyze the relationship between amount of caffeine consumed and how it correlates to the happiness of each country. However, since there were no free datasets that I can find for caffeine consumption, I decided to examine instead the relationship between happiness of a country and their alcohol consumption. I expect that countries that rank higher in the happiness index will have higher consumption of alcohol. However, it is just as likely that certain continents will have higher alcohol consumption because of the culture. For example, countries in asia have pretty high alcohol consumption purely because the culture there is heavily focused on drinking; therefore, there might no correlation between happiness ranking of a country and the amount of alcohol consumed.
+
+### Tidying Data
+```{r}
+library(tidyverse)
+
+happiness_index <- read_csv("https://drive.google.com/uc?export=download&id=1JVUgotLKc7rgJCLQY0fcRiJ5D-c9Dq-c")
+
+drinks <- read_csv("https://drive.google.com/uc?export=download&id=1LKsUDvrSrc6o9MEiBCAG9m7-5iP2shBZ")
+```
+
+The two datasets happiness_index and drinks were already tidy and so all I had to do was read them into the environment. However, I will be using pivot_longer and pivot_wider later on to show how I can tidy/untidy the datasets.
+
+### Joining Data
+```{r}
+inner_join(drinks, happiness_index, by = c("country" = "Country or region")) -> full
+```
+
+I joined the two datasets using inner_join which allows for R to join the two datasets based on matches in both datasets. In this case, I decided to join happiness_index and drinks by country. However, since the variable country is named differently in both datasets, I used by = c("country" = "Country or region") in order to set those two variables equal to each other for joining.
+
+I decided to use inner_join because I only wanted matches in both datasets. If I had used left_join for example, it only would've displayed matches from the left and right datasets and dropped non matches from the right dataset. Using inner_join, countries that only exist in one dataset are dropped.
+
+To make things more convenient, I saved the joined dataset into a new dataset called full.
+
+### Wrangling
+```{r}
+# Created new column for total number of servings of alcohol consumed 
+full %>% group_by(country) %>% mutate(total_servings = sum(beer_servings + spirit_servings + wine_servings)) -> full 
+
+# Checked the number of columns and rows of joined dataset
+full %>% glimpse()
+
+# Since there were too many numeric variables, I selected only the ones I was interested in analyzing and created a new dataset
+full %>% select(country, continent, total_servings, total_servings, Score, Generosity, 'Healthy life expectancy') -> sub_full
+
+# I want to find out how many countries are in each continent in this dataset.
+sub_full %>% group_by(continent) %>% summarise(n_distinct(country))
+
+# Now to analyze my data, I grouped by continent and created summary statistics for mean and standard deviation using pivot_longer and pivot_wider
+sub_full %>% group_by(continent) %>% select(is.numeric) %>% summarise_all(funs(mean, sd, median)) %>% arrange(desc(Score_mean), .by_group = TRUE) %>% pivot_longer(contains("_")) %>% separate(name, into = c("variable", "statistic"), sep = "_(?=[^_]+$)") %>% pivot_wider(names_from = statistic, values_from = value)
+
+# This code displays the quantiles of the selected variables from the sub dataset. Quantile also includes the min and max of the dataset.I then filtered out the Oceania in order to see the min, median, and max for all three variables.
+sub_full %>% group_by(continent) %>% select(total_servings, `Score`, `Healthy life expectancy`) %>% summarise_all(quantile) %>% filter(continent == "Africa")
+
+# This creates the correlation matrix between total servings of alcohol and other country variables
+x <- cor(x = full$total_servings, y = full[7:14]) %>% as.data.frame()
+x <- x %>% rownames_to_column("total_litres_alcohol") %>% pivot_longer(-1, 
+    names_to = "var2", values_to = "correlation")
+x %>% filter(correlation != 1) %>% slice(which.max(correlation))
+```
+
+After joining both datasets, I used glimpse() to see that there are 143 observations/countries and 15 variables. I narrowed down the variables I would be interested in summarizing and created a sub dataset called sub_full. First I wanted to see how many countries are in each continent and so I counted the distinct number of countries in each group. I found that there are 2 countries in Oceania, 10 in South America, 12 in North America, 38 in Asia, 40 in Europe, and 41 in Africa. The continent Oceania has the highest mean for score, total servings of alcohol, generosity, and life expectancy. The respective means are 7.268 points, 501 servings of alcohol, 0.331 points, and 1.031 points. In addition to having the highest mean, the standard deviations for the four numeric variables for Oceania are the smallest, with generosity having the lowest standard deviation of 0.00141. But because there are few observations for Oceania, it would decrease statistical power and therefore, I'll focus my attention on other continents.
+
+Africa had the lowest average happiness score of 4.379 and the lowest average total servings of alcohol of 80.756. The median was also calculated and the medians for the four variables for Oceania was the same as the means. The median for Africa for total servings of alcohol, score, generosity, and healthy life expectancy were 45, 4.461, 0.187, and 0.443 respectively. After finding that Africa had the lowest averages, I was interested in looking at the quantiles. From the 0th quantile to the 100th quantile, the values for the happiness scores are 3.083, 3.975, 4.461, 4.681, and 5.888 respectively. Since the 0th and 100th quantile are the min and max of the variable, it can also be confirmed that the minimum happiness score of a country in Africa is 3.083 and the maximum happiness score is 5.888. The median of variables for Africa can also be seen in the quantile function because the 50% quantile is the median. Using quantile resulted in the same median for Africa. After creating a correlation matrix between total servings of alcohol and the other numeric statistics from the happiness_index detailing GDP per capita, happiness score, overall rank, social support, etc, The greatest positive correlation was between total servings of alcohol and GDP per capita with a correlation of 0.6334. The most negative correlation was with overall rank with a -0.6184 correlation.
+
+1. number of variables and observations
+2. number of distinct countries in each continent
+3. mean
+4. standard deviation
+5. median
+6. quantile
+7. min
+8. max
+9. correlation between total servings of alcohol and socioeconomic data
+
+### Visualizations
+```{r}
+# Creating correlation heat map
+num_full <- subset(full, select = -c(country, continent, total_servings))
+num_full %>% cor() %>% as.data.frame() %>% rownames_to_column("var1") %>% pivot_longer(-1, names_to = "var2", values_to = "correlation") %>% ggplot(aes(var1, var2, fill = correlation)) +
+  geom_tile() + geom_text(aes(label=round(correlation,2)), color = "white") + scale_x_discrete(guide = guide_axis(angle = 45))
+```
+
+Above is the correlation heatmap for all of my numeric variables except for total number of servings of alcohol. This gives you a quick overview of variables that seem to be correlated to each other. For example, from the heatmap it can be seen that countries with high social support also tend to have a high score. 
+
+```{r}
+# Plot of total servings of alcohol versus score and colored by continent. This plot has its theme and color changed and the number of ticks on the x axis increased from 5 to 7
+ggplot(full, aes(total_servings, Score, color = continent)) + geom_point() +
+  scale_color_brewer(palette = "Set2") + 
+  ggtitle("Total Servings of Alcohol and Score on Happiness Index") + 
+  xlab("Total Servings of Alcohol") + ylab("Score on Happiness Index") + 
+  theme_dark() +
+  scale_x_continuous("Total Servings of Alcohol", breaks = c(0, 100, 200, 300, 400, 500, 600), labels=c(0, 100, 200, 300, 400, 500, 600))
+```
+
+In this scatterplot graphing total servings of alcohol of each country against its score, There seems to me a slight positive correlation between the two variables depending on continent. For example, when looking at Europe, higher total servings of alcohol usually resulted in a high score on the happiness index. Most African countries both had lower total servings of alcohol and scored lower on the happiness index. Looking at the entire spread of datapoints, there appears to be a relatively positive correlation.
+
+```{r}
+# Second plot with summary statistic of mean of beer servings and mean generosity goruped by country
+full %>% select(continent, beer_servings, Generosity) %>% group_by(continent) %>% summarise_all(mean) -> plot2
+full %>% ggplot(aes(x = beer_servings, y = Generosity, fill = continent)) + 
+  geom_boxplot() + 
+  geom_point(data = plot2, stat = "summary", fun = mean, aes(x = beer_servings, y = Generosity, color = continent)) + 
+  scale_color_brewer(palette = "Set3") + ggtitle("Mean Beer Servings vs Mean Generosity by Continent Boxplot") + xlab("Beer Servings") + ylab("Generosity")
+```
+
+I decided that for my second plot I would want to use a boxplot to see the distribution of beer servings and generosity score by continent. This would give the min, median, and max of generosity by continent while also varying by beer servings. Then I also added a scatterplot on top of the boxplot that plotted the mean of beer servings and mean generosity per country. Looking at the overlap of the scatterplot and boxplot, it can be seen that most of the observations on the scatterplot doesn't overlap with the boxplots. This can be explained by the fact that the boxplots per continent has a lot of variation. There is also the issue that there aren't many observations for Oceania so the boxplot for it is very small in comparison to other countries, which would decrease its statistical power. In North America and Asia there are a few outliers which affect the mean of the generosity score and the mean of the number of beer servings. 
+
+### Dimensionality Reduction
+```{r}
+# PCA performed --> chose comp. 6 that explains 91% variance. Scoring high on PC6 indicates that the generosity is high and that perceptions of corruption are low. In terms of type of alcoholic drinks, the number of spirit servings would also be low while wine and beer are slightly high in number.
+num_full %>% scale() -> num_full
+rownames(num_full) <- full$country
+pca_full <- princomp(num_full)
+names(pca_full)
+summary(pca_full, loadings = TRUE)
+
+# Plot showing scores of PCA
+results <- full %>% as.data.frame %>% 
+  mutate(PC1 = pca_full$scores[, 1], PC2 = pca_full$scores[, 2], PC3 = pca_full$scores[, 3], PC4 = pca_full$scores[, 4], PC5 = pca_full$scores[, 5], PC6 = pca_full$scores[, 6])
+results %>% ggplot(aes(PC1, PC2, color = continent)) + geom_point()
+results %>% ggplot(aes(PC3, PC4, color = continent)) + geom_point()
+results %>% ggplot(aes(PC5, PC6, color = continent)) + geom_point()
+
+pca_full$scores[,1:4] %>% as.data.frame %>% top_n(3, Comp.3)
+```
+
+Using PCA, I was able to reduce the number of closely related variables and form a more concise understanding of my dataset. In this case after selecting only the numeric variables of my fully joined dataset, which created num_ful, I normalized the results to standardize the range of observations. Then I am able to run a PCA on my numeric dataset and see which component describes the variation in my data the best. After looking at the cumulative proportion, I decided that PC 6 was going to describe the variance in my data the best. PC 6 explained 90.99% of the variance in my dataset and that variance was mainly affected by the different number of servings of the three different alcohol types and two socialeconomic statistics, generosity and the perceptions of corruption choices. Out of these 5 variables, spirit servings, generosity, and perceptions of corruption, which had eigen values of -0.418, 0.411, and -0.695 respectively, affected my dataset the most. If PC 6 was a high value, that means that people would've drank a less servings of spirit, however, they would also be more generous and perceive less corruption in their country. On the other hand if PC 6 was a low value that would indicate that people drank more servings of the other two alcohols, beer and wine. They would also be less generous and perceive their country to be more corrupt.
+
+Looking at the three different sctterplots graphing the interaction between the different principle components, we can get a better idea of how the data varies. When graphing PC 1 aginst PC 2, it can be seen that most of the points have a larger variation on PC 1 based on continent and therefore some small clusters can be seen. Specifically, Europe and Africa are spread out very differently acorss PC 1 while some of the other continents are jumbled in the middle. When looking at the countries who score highest on PC 1, all of them are European countries who are known for scoring high on the happiness index. Now looking at PC 3 graphed against PC 4, it can be seen that countries who ranked high have a consumed more liters of alcohol, especially wine, and have higher perceptions of corruption. In this case PC 3 is not as good as PC 1 in creating clusters of observations, however, there is some clustering to be seen. Specifically, it can be seen now that North America and Asia have scored lower on PC 3 while Africa and Europe are more spread out. Finally looking at PC 5 versus PC 6, there is virtually no clustering that can be found since the different continents are plotted very closely to each other. If some grouping is to be seen, it would be that Europe scored slightly lower on PC 5 and South America and Africa scored slightly higher. This would indicate that people in Africa and South America drank less servings of spirit than other alcohols and that they perceive their country to be less corrupt while also being more generous.
